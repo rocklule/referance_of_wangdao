@@ -1,0 +1,112 @@
+#Linux
+
+
+##用户操作
+
+`sudo su root`  －－－  切换用户
+
+`useradd username`  ----  添加用户  
+
+`passwd username` ----  给这个用户添加密码
+
+`chmod 777 filename`	－－	改为最大权限777  （或o＋x，给other组加执行权限）
+
+####关于权限
+一般情况下，进程的权限继承于运行者，即user id.(获取函数：`getuid()`)。但是，当程序的权限是`S`(share)时，进程的权限则继承于创建者，即此时进程的有效user id是创建者的id。（获取函数：`geteuid()`）
+
+
+##文件操作
+
+`cd /` -- 直接去根目录
+
+`ls -a －l -R`  -  list  (-a)显示所有文件 （-l）详细信息 (-遍历子目录)
+
+`mkdir -p /dir/dir/file`  －－ （－p）代表如果父目录不存在就创建  
+
+`mv -f sorce_path target_path`－－  移动文件／文件夹，（－f）代表强制不询问覆盖
+注意：也可用作重命名！只要在路径中指定文件名即可／
+
+`cp -r /dir/`		－－	(-r)代表包含文件夹，否则只操作文件（mv同理）
+
+`touch filename` --  创建一个空文件
+
+####高级篇
+
+`cat -n file_name` －－输出file  ，（－n代表输出行号）
+`<`和`>`标准输入输出重定向，**注意**，以左边的操作为标准判断输入或输出。**注意**，标准输入表示从键盘的输入，标准输出表示从屏幕的输出。  
+`>>`－－***追加写入***的重定向    
+
+**new!** `cat a.txt b.txt > c.txt` ---  合并连接两个文件
+**new!** cat不指定输入时，默认以键盘作为输入。
+
+**new!**  `./client $( cat )` 屏幕输入作为进程输入
+        
+`cat * | wc -l`  －－输出所有文件至wc，－l 统计行数，－c 统计字符, -w 单词  
+注意：`*`为通配符，请善用之。(不用cat也行其实。。。wc为word count)
+
+`tar` + `option + target_path + source_path` 归档命令
+
+- `czvf`-- 打包压缩，c创建，z压缩，v可见过程，f归档
+- `xvf` -- 解压
+
+**new!** `tail -f 5 /var/log/messages` 读取文件最后5行，（－f表示follow，当文件增长时更新，可监视文件）
+
+**new!** `paste –d ”*” file1  file2` 按行合并文件，（－d以*区分两个文件，默认tab）
+
+`cat a.txt | sort | uniq`  排序，去重复。注意：sort可以处理列表（如第二列）
+
+##杂项
+
+`man 2 operation` -  查看operation的manual，数字表示第二个同名文件
+
+`time python test.py`    －－可返回其执行时间
+
+`getenv` --  获取环境变量
+
+`getopt` --  解析命令行参数
+
+####远程那些事儿
+`ifconfig > ip.txt`  检查ip。并导入txt以便查看
+`sudo SSH <host's ip>`  远程登录root
+
+`telnet SERVER_IP SERVER_PORT` 简单tcp客户端，例：`telnet localhost 8888`
+`netstat -an | grep tcp | grep 8888` 检查网络连接，后面两个是对结果的搜索
+
+####开机时不进入图形界面  
+`vim /etc/inittab`  打开这个文件  
+id:`5`:initdefault: ---  改成 --- id:`3`:initdefault:
+
+####**new!**  `grep`---全文查找()
+
+`grep  -n -l –i “abc”  filename	`//-n显示行号,-l显示文件，-i忽略大小写  
+`grep  -v “abc”		filename`	//反向查找，即不包含abc这个串的那些行  
+`grep  -E “abc|efg”  filename` //扩展正则表达式， 查找包含abc 或者 efg的行  
+
+`egrep 'expression' files` //增强正则的grep，注意会去除所有回车后，对每行独立匹配，所以不会匹配到跨行的内容。 
+
+
+####bin目录下的程序不用自动查找不用带路径
+
+
+
+
+eof = control + d
+sigint = control + c 中断执行
+sigquit = control + \
+
+
+
+awk    
+crontab  
+分 时 日 月 周 date >> /home/name/date.log  
+		Crontab 的执行时按照用户为单位的，例如，usr1安排了crontab 任务列表，不能执行usr2的可执行程序，如果usr1没有这个程序的可执行权限的话
+
+ps
+ps –ef | grep  exename
+e  显示环境变量
+f  显示程序间的关系
+
+
+sudo !-1   用root身份执行上一条命令
+
+

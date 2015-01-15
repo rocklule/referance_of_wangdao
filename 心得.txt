@@ -1,0 +1,61 @@
+心得
+===========
+
+
+experience
+----------
+
+1. 小心循环内变量的初始化，考虑下是放在循环里面还是外面
+2. 指针类型转换要特别注意！！特别注意！！不注意吃了苦头不要怪我。(整形数组装字符串，谁玩谁想死)
+3. 警惕strlen()，读到0就会结束！！此时长度是错误的。只能读字符串／文本！！
+4. scanf()读管道时，记得在末尾补上空格、回车或tab
+5. select()不能被系统调用中断，否则会出错。
+6. recv()要预知接受长度，防止阻塞。
+
+---
+
+Tips
+----
+1. It's **Defensive Programming** that will facilitate both validation and debugging.   防御性编程对“验证”和“排错”都有帮助，提早捕捉错误比让错误流传很远再慢慢排查要方便得多
+    －使用assert、try、等
+    －对所有常量做define，定义一个容易理解的名字
+    －在所有scanf之前先清空缓冲区
+2. **单元测试**是非常必要的。
+3. Debuging 也是一种 Searching， 在排错的时候注意系统性，例如折半查找，逐步缩小搜索区域（同时包括搜索数据和代码中的错误）
+
+
+---
+
+Tricks
+------
+1. Test Suit测试套件
+编写一个测试程序，包含一系列需要测试的值。注意回归测试（Regressive test），即在debug后面的问题以后，再次检测之前正确的测试值。（使用测试套件是一个很好的办法来实现回归测试）
+
+---
+
+
+－ 别用数组的思路去考虑链表的问题！链表的精髓在于指针重组，把后续暂存起来就行！
+
+
+
+
+为什么需要 size_t 这个类型？ 用int不好吗？
+
+
+The reason size_t is not simply a long on all platforms is because an
+arithmetic type of at least 32 bits is not necessarily a natural choice
+for the type used to hold the size of an object.
+
+In 7.17.4, the standard recommends
+"The types used for size_t and ptrdiff_t should not have an integer
+conversion rank greater than that of signed long int unless the
+implementation supports objects large enough to make this necessary."
+
+This explicitly acknowledges the possibility of size_t being greater
+than a long (though it is recommended that this not be so unless
+actually necessary, because older programs or badly written newer
+programs might break if this does not hold). On the flip side, size_t
+might be smaller on small platforms where single objects cannot exceed a
+certain size, although memory as a whole may be larger.
+
+size_t is left abstract so platforms are not artificially constrained.

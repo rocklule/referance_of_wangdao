@@ -1,0 +1,100 @@
+Function模版类
+=============
+
+[TOC]
+
+---
+
+
+什么是function模版类？
+-------------------
+功能上，用于替代c语言中的`函数指针`。但是这个类提供了更强大地功能，使用上更灵活。    
+注意：此为c++11中的新标准，在编译时注意加上`-std=c++0x`的编译选项
+
+强大在哪里？
+---------
+1. 函数`适配器`功能，调整函数参数的数量、顺序。
+2. **有待补充……**
+
+
+基本用法：
+-------
+- 头文件： `#include <functional>`
+- 范例：`function<int (char*, double)>`，int表示返回值类型，括号内表示参数类型。合起来这是一个模版类名，可以定义一个对象。
+
+```cpp
+void test(int i, double j)
+{
+    cout << i << " " << j << endl;
+}
+
+int main(int argc, const char *argv[])
+{
+    //函数test的类型为：void (*) (int, double)
+    function<void (int, double)> fp;
+    fp = test;
+    fp(10, 3.45);
+    return 0;
+}
+```
+
+
+适配器的实现：
+----------
+1. bind()函数。可以固化（绑定）目标函数的行参。（对于类成员函数，可以固化一个对象参数，使其退化为普通函数。）
+2. 占位符。可以在bind时保留部分参数不立即固定，起到减少参数数目、交换参数顺序等适配器功能。
+
+使用范例：   
+
+```cpp
+//进阶使用
+class Test{
+public:
+    void testfunc(int a, string b, double c){}
+};
+
+void basic_func1(int d){}
+void basic_func2(int e, double f){}
+
+int main(void){
+    Test obj;   //用于bind
+    function<void (double, int)> fp;    //定义适配器
+    
+
+//这里展示如何bind。提示：使用bind函数时，参数的顺序必须与目标函数一致。
+    fp = bind(&Test::testfunc,              //注意成员函数需要加域空间
+              &obj,                    重要！//类成员函数隐含第一参数为对象指针！！
+              std::placeholders::_2,        //这里是目标函数的int a参数位置
+              string("hello"),             //这里是目标函数的string b参数位置
+              std::placeholders::_1)    
+    重要！//占位符表示：绑定以后函数的第一参数会被填到这里。（这里应该填一个double）
+
+
+
+//这里展示如何使用fp
+    fp(3.14, 4);     //3.14会作为一个double送到testfunc的第三个参数
+                     //4会作为int a 的传入参数
+                     //testfunc中的string参数被绑定为string("hello")，fp无法修改
+                     //注意fp还绑定了obj对象，testfunc中的this指针都会基于obj这个对象。
+
+
+//这里补充两个基本使用方法，以免以后看不懂……
+    function<void (int)> fp2;
+    fp2 = basic_func1;
+    fp2(2);   //可以直接当basic_func1用了
+
+
+    fp2 = bind(&basic_func2, std::placeholders::_1, 3.14);
+    fp2(1);   //这样就是调用了第二个参数为3.14的basic_func2.
+};
+```
+
+
+
+
+
+
+
+
+
+

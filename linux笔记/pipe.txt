@@ -1,0 +1,37 @@
+#管道－－特殊的文件
+
+###无名管道
+特性：  
+1. 只用在亲属关系进城间通信
+2. 只存在于内存中  
+创建：
+
+	#include <unistd.h>	int pipe(int fds[2]);   //强制fds[0]读，fds[1]写！！
+用法：  1. 定义  
+2. fork()产生父子进程，此时fd[0]与fd[1]自动收尾相接，一端读一端写
+3. 读的进程关闭写端，写的进程关闭读端。（不必要）
+
+###命名管道
+创建：
+
+	#include <sys/types.h>	#include <sys/stat.h>	int mkfifo(const char *pathname, mode_t mode);  //mode为权限（777）
+	
+	注：也可在terminal中使用mkfifo命令基本操作：
+	int fdFifo = open("MyFifo.pip",O_WRONLY);  注意：打开管道是阻塞的！	write(fdFifo, "hello", 6);	close(fdFifo);
+	unlink(fdFifo);	
+
+###标准流管道（调用无名管道）
+标准流管道感觉是个函数，你可以在进程内调用另一个程序的输出，或者给另一个程序指定输出。**好处是：可以调用不同语言的代码去处理数据！**
+
+使用：
+
+	#include <stdio.h>	FILE* popen(const char* command, const char* open_mode); 
+	int pclose(FILE* fp);    //command是shell命令 
+			//mode只能是r或w，
+			//r时，被调用函数的输出被写入文件指针，
+			//w时，写入数据至文件指针作为被调用函数的输入。注意：此处的输入输出指标准输入输出，即屏幕和键盘！
+	
+实现原理，昭哥版：
+1. 主进程建立无名管道，并fork
+2. 子进程调用dup2重定向输入输出（根据open_mode）
+3. 子进程以execvp调用shell的command，把内容通过无名管道返回给主进程。

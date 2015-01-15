@@ -1,0 +1,110 @@
+IO流 stream
+===========
+
+
+什么是“流”？
+----------
+流是一种特殊得对象，特点：不可以复制、赋值。（作为形参时必须为引用型）（不能放如vector）
+**注意：**c++的IO流默认都是ASCII模式的！
+
+头文件
+-----
+```cpp
+#include <iostream>
+#include <fstream>
+#include <sstream>
+```
+
+
+分类
+---
+###控制台IO流
+
+- `cin` -- 标准输入
+- `cout` -- 标准输出
+- `cerr` -- 标准错误输出（输出至terminal，特点是无缓冲，直接显示不需要endl）
+
+###磁盘文件IO流
+
+- `ifstream` -- input file
+- `ofstream` -- output file
+- `fstream` -- ??
+
+###字符串IO流（这个不需要关闭流）
+
+- `istringstream` -- input string
+- `ostringstream` -- output string
+- `stringstream` -- ??
+
+
+类型
+---
+`istream`, `ostream` 待深入
+
+
+IO流的条件状态 （flag）
+------------
+
+- `good` --  ok
+- `bad`  --  系统级故障,不可恢复
+- `fail` --  读取失败，可能是非法输入，也可能因为读到EOF
+- `eof` --  cin 碰到了文件结尾
+
+###状态查询（用IO流对象封装好的方法）
+.eof() /  .fail() /  .bad()  / .good()
+
+###状态设置
+1. `.clear()` --  清除错误状态
+2. `cin.ignore(std::numeric_limits < std::streamsize > ::max(), '\n');`   //忽略缓冲区中的错误数据 (#include <limits>)
+
+
+
+关于cin
+------
+于scanf的机理类似，也有一个缓冲区。
+
+- 特性1：`cin >> 整形` 相当于从缓冲区scanf一个整形，**然后返回一个cin的引用**，所以可以这样用：`cin >> int >> string` 先读一个整形再读一个字符串
+- 特性2：读取时遭遇非法字符时，将对目标变量进行重置（int型会被置为0），并把自己的状态置为`fail`。注意：string对象不会被重置，保留原值。
+
+
+IO流对象的取值操作
+---------------
+例如`while(cin >> int)`这样的语句，while检测`cin >> int`的返回值，也就是对cin的引用进行取值操作。 IO流对象的取值操作实质是对**条件状态**的检验，如果是good，就返回1，如果是其他任何一个异常，就返回0。 
+
+
+操纵符
+-----
+操纵符对io流进行操控。
+
+- endl ---  增加一个回车，并清空输出缓冲区。
+- hex  ---  以十六进制显示
+- oct  ---  八进制
+- setprecision(n)  ---  设置浮点数精度
+
+
+
+关于文件流
+---------
+经典打开文件方式：
+
+	//打开文件的函数，注意传入文件流对象的引用，返回值要是它的引用。
+	ifstream &open_file(ifstream &in, const string &file) { 
+		in.close();
+		in.clear(); 
+		in.open(file.c_str());   //把string转换成c风格字符串
+		return in;
+	}
+
+	//这样使用：直接判断
+	if (!open_file(my_fstream, filename)){
+		throw runtime_error("file open failed!");
+	}
+
+
+getline()函数 相当于 fgets()
+--------------------------
+
+
+
+
+

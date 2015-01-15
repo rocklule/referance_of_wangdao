@@ -1,0 +1,4 @@
+peter	12345	0
+marry	12345	0
+ruler	12345	1
+admin   admin   1

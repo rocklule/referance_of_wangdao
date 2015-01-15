@@ -1,0 +1,310 @@
+#网络编程 Network Programming
+
+##socket
+
+####形式：
+一种特殊的文件描述符，存放在***内核空间***，由系统维护。
+
+####头文件：
+```cpp
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+```
+
+####创建：
+`int sfd = socket(AF_INET, SOCK_STREAM, 0);`  
+
+参数1，域：`AF_INET` － IPv4。 `AF_UNIX`  - 本机。 注：mac为PF  
+参数2，类型：`SOCK_STREAM` － 流模式（tcp）。 `SOCK_DGRAM` － 数据报（udp）  
+参数3，协议：不了解……默认填0.
+
+注意1：socket也是文件描述符，用完需要close().  
+**注意2；**socket是可以共享的，fork()以后父子进程共享，此时客户端发来的数据会发生争抢，但是他们使用的是同一个socket，是同步的。
+
+####设置：
+所有有关socket的函数设置都是用的一个`struct sockaddr_in`的结构体。
+```cpp
+	struct sockaddr_in{
+		short int			sa_family;   	/*域*/  (AF_INET)
+		unsigned short int	sin_port;		/*端口号*/
+		struct in_addr		sin_addr; 		/*IP 地址*/
+		unsigned char		sin_zero[8];	/*填充*/  (见备注)
+	}
+	
+	struct in_addr{							//这是ip地址的结构体
+		unsigned long int		s_addr;		/*32位IPv4地址，网络字节序*/
+	}
+```
+
+备注：  
+什么是`struct sockaddr`?
+（自己理解）这个结构体是网络通信时的标准结构体，使用`struct sockaddr_in`时需要把类型转换成前者，而且`struct sockaddr_in`里面的填充字段也是为了和前者兼容保持长度一致。
+
+范例：
+```cpp
+	#define IP "192.168.1.25"
+	#define PORT 8888
+    struct sockaddr_in client_addr;    //定义
+    
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_port = htons(PORT);
+    client_addr.sin_addr.s_addr = inet_addr(IP);  
+    //可以填 INADDR_ANY，代表（0.0.0.0）本机的任意IP都在此端口监听。（因为可能有多块网卡）
+```
+
+####常用函数
+1. `bind()`  用来绑定socket的ip和端口号，不绑定的话端口号是随机的，当然ip只能绑自己。－－ udp和tcp都能用。
+2. `listen()`  监听，用于tcp。 显然udp不需要listen和accept。
+3. `connect()` 用于客户端向已经监听的服务器请求连接。（addr记得填服务器的……）
+4. `accept()`  监听后，如果有客户端connect()就可以建立三次握手。**（阻塞属性！）** 成功连接后，返回一个socket的文件描述符，这个新的socket用于和客户端通信。
+5. `recv()`  从socket接收内容，**(阻塞属性！)**需要指定接收内容大小，收不到指定大小就一直阻塞等待。所以必须事先了解传输文件的长度。  
+**注意1:** 只能用在建立连接的socket间（tcp）  
+**注意2:** 可用read()替代，但是recv功能更丰富。（MSG_PEEK 缓冲预览、MSG_WAITALL 强制等待收到所有的数据....）
+
+6. `send()`  与recv对应。在发送缓冲区未满时不阻塞。
+7. `recvfrom()` 和 `sendto()` 无链接的数据报发送、接收。
+
+####socket的设置
+简介：可以设置缓冲区大小之类的，复杂！  
+参考：`setsockopt用法解析.pdf`
+
+####socket得关闭
+close与shutdown的区别：  
+a)  close采用引用计数关闭的。而shutdown则是直接关闭。  
+b)  close是同时关闭读写两端，而shutdown可以指定关闭哪个方向。  
+
+
+
+##IP地址的转换函数
+###IP字符串－－长整形（32位）
+```cpp
+	inet_addr()		//ascii -> network （网络字节序）（也就是大端）
+	inet_aton()		//ascii -> network	(不常用，因为需要传出参数）
+	inet_ntoa()		//network -> ascii 
+```
+
+###网络字节序－－主机字节序 （大端小端）
+
+```cpp
+	htons()			//host to network -short(短整形)
+	htonl()			//host to network -int
+	ntohs()			//network to host -short
+	ntohl()			//network to host -int
+```
+
+##全局参考
+请参考github文件夹里面的socket文件夹（请spotlight）
+
+---
+
+####为什么服务器的listen TCP在关闭后，要有1分钟的TIME_WAIT状态?
+60秒是基于包的两倍最大生存时间。 因为socket关闭后，可能会有还没发出去的包，或者还有在网络中没有收到的包。如果在关闭后马上就在同一个端口打开新的tcp，那么之前在网络中的老包会被认为是新包而发生问题。所以需要等待两倍的最大包生存时间。如果网络通畅，可以设置的小一点。  
+参考：http://stackoverflow.com/questions/337115/setting-time-wait-tcp
+
+######设置端口复用
+```cpp
+
+    int on = 1;
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+        ERR_EXIT("setsockopt");      
+```
+
+---
+
+####TCP的粘包问题
+产生原因：（**自己感觉**）  
+1. 在发送方缓冲中堆积，一次性发送。    
+2. 在接收方由于网络问题，两个包同时到达。
+
+######解决方案：  
+1) 发送时加入push指令，不等待缓冲区满就发送。（这样会降低网络效率）  
+2) 先发送包的长度（一个固定的4B的包）（注意大小端转换），再发数据（根据长度）。（这样会降低传送效率）   
+3) 手动标记包的结尾。（以\n为结束符号）接受端使用readline函数，可保证不粘包。（实际中，HTTP、FTP用的就是这种技术，结束标识为：`\r\n`）  
+
+---
+
+####什么时候需要大小端转换？
+答：当发送的数据以大于1B为单位时。（不需要我解释了吧？亲）
+
+---
+
+####为什么客户端的TCP关闭了，服务器有时也会关闭？
+当客户端的TCP socket关闭时，会向服务器发送FIN包。如果此时服务器缓冲中有很多其他的数据，暂时未读取到FIN包，则会认为客户端依然保持通信。如果这时向客户端发数据，server会收到一个RST复位报文，此报文会对server的socket做标记。如果对这个socket继续写入数据，则会触发SIGPIPE信号，此信号默认终止进程。。。。
+
+######解决方案：－－－手动注册SIGPIPE信号
+```cpp
+    if(signal(SIGPIPE, SIG_IGN) == SIG_ERR)  //SIG_IGN表示不作处理
+        ERR_EXIT("signal");
+```
+
+
+---
+
+#服务器模型
+
+##Select
+`select`函数，由内核**非阻塞性地**试探多个I/O端口的可读／写性，并设置最长等待时间。如果在最长等待时间内端口集合的情况发生变化，则立即退出，若没有，则等待到设定的最长等待时间，并返回0.  
+
+使用步骤：  
+1. `fd_set my_set temp_set;` 定义监听集合，temp_set用于承受select的破坏  
+2. `FD_ZERO(&read_set);` 清空并初始化  
+3. `FD_SET(fd_read,&my_set)` 把需要监听的文件描述符加入集合。  
+4. `select(MAXFD,&temp_set, NULL,NULL,&tm);` 在限定时间内进行轮训检测  
+5. `if(FD_ISSET(fd_read,&temp_set))`  读取检测结果。
+    
+注意：set的实现是一个bit_map,加入文件描述符时，就把文件描述符的值对应的bit置为1，select操作的实现是对set内非0位对应的文件描述符进行检测，如果该设备**是阻塞状态**，则把改位置为0，如果**是ready状态**，则不对值更改，即保留1.  这样，检测后的set文件中剩下的1就是非阻塞的设备／文件。（所以这个操作就是破坏性的，所以需要每次select以后用副本重置这个set）（即：`temp_set = my_set`）
+
+***关于最长等待时间的设定：  ***   
+
+```cpp
+struct timeval tm;   
+         tm.tv_sec = 0 ;        //秒  
+         tm.tv_usec = 1000;     //纳秒
+```
+
+**注意：**置为全0表示不等待，置为NULL表示无限等待
+
+***错误处理***  
+select的返回值是set中ready的设备数量，当返回－1时，说明有错误。请perror。  
+注意：在select中对该进程进行`interrupted call`会出错。
+
+
+##Poll
+实现方式与select类似，也会阻塞在poll函数，但是用起来更方便一些。
+
+使用步骤：   
+0.pollfd结构体定义：
+```cpp
+    struct pollfd {
+     int    fd;       //需要监听的文件描述符
+     short  events;   //写入需要监听的事件。有一组宏定义。
+     short  revents;  //poll函数返回后会把fd的状态变化写入这里
+    };
+```
+1.预处理：
+```cpp
+    struct pollfd clients[2048];  //2048是自己设定的监听集合上限
+    
+    for(int i = 0; i < 2048; ++i){
+        clients[i].fd = -1;     //设置为－1时表示不监听
+    }
+```
+
+2.把文件描述符加入监听集合
+```cpp
+    clients[0].fd = STDIN_FILENO;   //0是数组下标，泛指。   
+    clients[0].events = POLLIN;   //宏定义，表示监听可读
+```
+注：把fd移出集合只要把fd置为-1即可。
+
+3.开始监听
+```cpp
+    nready = poll(struct pollfd * fds, int number_of_fds, int timeout);
+    //第一个参数填监听数组，即clients。
+    //第二个参数填监听数组的实际长度，即最大下标。
+    //第三个参数类似于select， 如果填-1表示无限等待。
+    //返回值为可读的（活动的）fd数量。
+```
+
+4.检查结果
+```cpp
+    if(clients[i].revents & POLLIN){
+        /* operations */
+    };
+    //revents为系统处理的返回结果。按位与，你懂得，如果结果非零则说明可读。
+```
+
+>资料参考：http://www.cnblogs.com/Anker/archive/2013/08/15/3261006.html
+
+
+##epoll
+epoll是对以上两种模型的改进（主要在**大规模**fd时的性能方面），在linux2.6版本中正式被引入。
+
+使用步骤：  
+0.epoll_event结构体定义
+```cpp
+    struct epoll_event {
+        __uint32_t events;  //设定事件，有一套宏定义。
+        epoll_data_t data;  /* User data variable */(暂不了解……)
+    };
+/*
+events可以是以下几个宏的集合：
+EPOLLIN ：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
+EPOLLOUT：表示对应的文件描述符可以写；
+EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+EPOLLERR：表示对应的文件描述符发生错误；
+EPOLLHUP：表示对应的文件描述符被挂断；
+EPOLLET： 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。
+EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里
+*/
+```
+
+1.创建监听集合
+```cpp
+    int epollfd = epoll_create(2048);
+    //返回一个句柄fd。 出错时返回－1。
+```
+
+2.加入监听描述符
+epoll用epoll_event结构体增加监听描述符。
+```cpp
+//定义并设置结构体（epoll的fd输入和状态返回都用这个结构体）
+    struct epoll_event ev;
+    ev.data.fd = listenfd;    //目标fd
+    ev.events = EPOLLIN;
+重要！//用于状态返回的结构体数组
+    struct epoll_event events[2048];
+//加入监听集合
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);
+    //第一个参数为epoll句柄
+    //第二个参数为需要实施的动作，epoll所有的动作都靠这个control函数实施
+        //宏定义：
+        //EPOLL_CTL_ADD：注册新的fd；
+        //EPOLL_CTL_MOD：修改已经注册的fd的监听事件；
+        //EPOLL_CTL_DEL：从epfd中删除一个fd；
+```
+
+3.监听
+```cpp
+    int nready = epoll_wait(int epollfd, struct epoll_event * event_arr, int maxevents, int timeout);
+    //第一个参数是epoll句柄
+    //第二个参数为结构体数组，用于返回活动的fd及其状态，实际长度为本函数返回值。这里填events
+    //timeout处填－1同样表示无限等待。
+重要！//返回值是活动的fd个数，根据模式不同会有所不同。
+```
+
+4.检查结果
+这个步骤与poll区别较大。由于epoll采用callback机制，系统会把状态发生变化的fd对应的结构体放入返回数组中，供查询。所以需要遍历返回数组取出活动的fd。
+```cpp
+    for(i = 0; i < nready; ++i){
+        if(events[i].data.fd == listenfd){
+            //范例操作
+        }
+    }
+```
+
+>参考：http://www.cnblogs.com/Anker/archive/2013/08/17/3263780.html
+
+##三种模型的对比
+本质：  
+1. select和poll的本质，是用**非阻塞**的方式，**轮询**fd集合。
+2. epoll的本质，是用**异步IO**，当fd状态变化时，系统自动callback把fd加入返回数组中。
+
+epoll的优势：  
+1. fd数目无上限（select最大1024，poll也无上限，只要内存够）
+2. 不需要每次把fd集合copy到内核空间。epoll用了内存共享技术。
+3. 不需要轮询。  
+
+>参考：http://xingyunbaijunwei.blog.163.com/blog/static/76538067201241685556302/
+>异步IO：http://www.ibm.com/developerworks/cn/linux/l-async/
+
+###三种模型的选择？
+在选择select，poll，epoll时要根据具体的使用场合以及这三种方式的自身特点。表面上看epoll的性能最好，但是由于epoll的实现机制非常复杂，所以在连接数少并且连接都十分活跃的情况下，select和poll的性能可能比epoll好，毕竟epoll的通知机制需要很多函数回调。
+
+###unix上的epoll？   
+epoll仅限linux，在unix上使用`kqueue`实现类似功能
+>参考：http://www.ibm.com/developerworks/cn/aix/library/1105_huangrg_kqueue/
+
+

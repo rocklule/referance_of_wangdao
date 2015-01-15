@@ -1,0 +1,174 @@
+#linux系统文件函数 / file
+
+##主要函数（注：仅能在linux使用）
+
+###文件头
+	#include <sys/stat.h>  		//目录操作  
+	#include <sys/types.h>   	//目录操作  
+	#include <dirent.h>   		//获取目录信息   
+	#include <sys/stat.h>   	//获取文件信息
+	#include <fcntl.h>    		//文件操作
+	#include <errno.h>  		//错误处理  
+	#include <unistd.h>  		//linux通用头
+
+###目录操作
+`getcwd(); `//获取当前目录,相当于 pwd 命令  （详细参数请man）
+
+￼`chdir();` //修改当前目录,即切换目录,相当于 cd   
+
+￼`mkdir();` //创建目录,mode 是目录权限
+
+`opendir()`; //打开一个目录
+￼
+###获取目录信息
+####读取目录
+`struct dirent *readdir(DIR *dir); `//读取目录的一项信息,并返回该项信息的结构体指针
+
+结构体如下：
+
+	struct dirent
+	{
+		ino_t d_ino;  				//此目录进入点的inode 
+		off_t d_off;  				//目录开头到进入点的位移
+		unsigned short d_reclen;   	//目录名的长度
+		unsigned char d_type; 		//所指的文件类型
+		char d_name[256];			//文件名
+	};
+
+####获取文件信息
+`int stat(const char *file_path, struct stat *buf);`  
+//把文件信息写入结构体指针
+
+结构体如下：
+
+	struct stat {
+		dev_t 		st_dev;		设备描述符
+		dev_t 		st_rdev; 	设备类型
+		ino_t 		st_ino; 	i节点号
+		mode_t	 	st_mode;	文件类型。 重要！
+		nlink_t 	st_nlink;	文件链接数
+		uid_t 		st_uid;		用户id
+		gid_t 		st_gid;		组id
+		off_t 		st_size;	文件大小。重要！
+		blksize_t 	st_blksize;		块大小
+		blkcnt_t 	st_blocks;		块数
+		time_t 		st_atime;	最后访问时间
+		time_t 		st_mtime;	最后修改时间
+		time_t 		st_ctime;	创建时间
+	};
+
+关于st_mode类型：**（宏定义！！）**
+
+	S_ISLNK(mode)  	判断 符号链接
+	S_ISREG(mode)  	判断 普通文件
+	S_ISDIR(mode)  	判断 目录。 重要！ 
+	S_ISCHR(mode)  	判断 字符型设备
+	S_ISBLK(mode)  	判断 块设备
+	S_ISFIFO(mode)	判断 命名管道
+	S_ISSOCK(mode)	判断 套接字
+以上判断文件类型，用法：`if(S_ISDIR(st.st_mode))`
+
+	S_IRWXU		－00700 权限	  
+	S_IRUSR		－00400 权限	
+	S_IWUSR		－00200 权限
+	S_IXUSR		－00100 权限		这四个user权限组
+	
+	S_IRWXG		－00070 权限
+	S_IRGRP		－00040 权限
+	S_IWGRP		－00020 权限
+	S_IXGRP		－00010 权限		这四个group权限组
+	
+	S_IRWXO		－00007 权限
+	S_IROTH		－00004 权限
+	S_IWOTH		－00002 权限
+	S_IXOTH		－00001 权限		这四个other权限组
+	
+以上判断文件全新啊，用法：`if(st.st_mode && S_IRWXG)`  **两种宏定义的用法不同！！！**
+	
+####其他函数
+`rewinddir(); ` //重新定位到目录文件的头部  
+`seekdir();`  //用来设置目录流目前的读取位置  
+
+`telldir(); `  //返回目录流当前的读取位置  
+
+`closedir(); `  //关闭目录文件  
+
+
+###文件操作
+####打开，创建
+`int open(const char *pathname, int flags, mode_t mode);`  
+	//文件路径 打开方式 创建权限  －－－注意：此函数可以在文件不存在时创建  
+返回值：成功0，失败－1.  
+注意，此函数返回文件描述符，若需转换成文件指针，请调用`fdopen`.
+
+flags选项的宏定义：
+
+	O_RDONLY			只读
+	O_WRONLY			只写
+	O_RDWR			读写
+	O_CREAT			如果文件不存在,则创建文件
+
+重要范例：
+
+`int file = open(“1.txt”,O_WRONLY | O_CREAT | O_APPEND , 0755);`    
+`O_EXCL`   
+
+####读写操作
+
+￼`long read(int file, void *buf, size_t count);`//文件描述符，缓冲和长度  
+注意1: 能抓取回车，什么都读  
+注意2: 读键盘、管道、socket时阻塞，读普通文件不阻塞!!!  
+注意3: **虽然指定读取长度，但是只要文件不空，就算长度不够也不会阻塞**。(重要特性！)
+
+`long write(int fd, const void *buf, size_t count);`
+
+`lseek` 调整读写文件指针位置。注：`文件空洞`－指针位置超出文件大小，改变了文件的属性，但并未实际增加文件大小。
+￼
+`unlink` 删除
+
+`dup2(source , target)`---  文件操作符复制（实现重定向）
+
+
+####标准输入/输出流
+在进程一开始运行,就自动打开了三个对应设备的文件,它们是标准输入、输出、错误流,分别用 全局`文件指针(FILE *)` stdin、stdout、stderr 表示,stdin 具有可读属性,缺省情况下是指从键盘的读取输入,stdout 和 stderr 具有可写属性,缺省情况下是指向屏幕输出数据。
+若需要`文件描述符`：0-标准输入，1-标准输出，2-错误处理。    
+宏定义：`STDIN_FILENO` , `STDOUT_FILENO`
+
+
+####由用户id取得用户名和所在组
+
+	/etc/passwd 用户名密码id号
+	getpwuid 由uid取name
+	getgrgid 由groupid取group name
+
+
+---
+
+####Write函数的实现过程
+
+1. 陷阱指令系统调用，由于内核态不能读写用户地址空间，先要把buffer拷贝到内核空间。
+2. 系统再向文件写数据。
+
+
+####linux文件系统的整体框架
+- 数据结构：
+	- 进程维护`文件描述符表`（以文件描述符(/int)为下标，存储指向文件打开表的指针）
+	- 系统维护`文件表`（每打开一次文件就会）
+		- flags  ------   一个数，以每一bit标注状态标识和访问模式。（如是否阻塞）（所以，没有阻塞的函数，只有阻塞的文件！！）
+		- offset -----  文件的目前的读写指针
+		- rcent -----   文件描述符的引用计数
+		- ptr    	----	  指向文件inode的指针
+- 操作：
+	- fcntl 函数，可以操作flags，调整是否阻塞。
+- 注意1：dup的操作会让多个文件描述符指向同一个文件表，增加引用计数，但是会共享文件表。
+- 注意2：对同一个文件打开两次，会产生两个文件表，对文件的操作互相独立。
+- 注意3：对于FILE*类型的stdin，其实调用的还是文件描述符，指针指向文件描述符的表项。
+
+
+####关于sendfile()函数
+在服务器发送文件的操作中，需要先用read把文件内容从kernel中copy至用户空间，再用write把内容copy回至kernel空间，再发送，这样效率比较低。   
+sendfile函数可以直接在kernel中写入socket发送，效率较高。
+
+
+
+

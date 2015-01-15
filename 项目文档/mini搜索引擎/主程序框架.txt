@@ -1,0 +1,41 @@
+
+
+fork£¨£©
+
+waitpid(pid,NULL,WNOHANG)
+
+tcp
+
+int main()
+deamon();
+
+while(fd = accept())
+{
+	pid = fork()
+	if(pid == 0)//handle_query
+	{
+		piopen("exe","r")
+
+		exit(0)	
+	}
+	if(pid > 0){
+	waitpid()
+		}	
+	
+}
+
+
+select
+tcp
+
+
+
+python
+
+
+
+mysql
+
+
+
+

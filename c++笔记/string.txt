@@ -1,0 +1,23 @@
+#String类
+###Tips
+- 可以直接用常量字符串赋值
+- 相加就是strcat
+
+
+
+
+###方法
+####size()
+返回字符串长度，注意不包含'\0'。  
+返回类型为：`size_t` 或 `string::size_type` 
+
+####find(字符)
+返回该字符在串中得位置。  
+返回类型为：`string::size_type` 。    
+`string::npos`为常量－1，表示查找失败
+
+
+###字符串转换为string类
+string("hello")
+###把string转换为c风格字符串
+string.cstr()

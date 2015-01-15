@@ -1,0 +1,62 @@
+#线程 thread
+
+##头文件
+\#include <pthread.h>  
+编译时需要包含库：`–lpthread`
+
+##创建和退出
+`pthread_t my_thid`  ----   pthread_t的其实是unsigned long int，线程号  
+______注：`pthread_self()`函数可返回当前线程号  
+
+`pthread_create()`   ----   参数请man
+`pthread_exit()`   -----  如果用exit()整个进程就退了
+
+
+##资源回收
+`pthread_join()`  ----   相当于多进程得waitpid()  
+
+`ptread_detach()` ----   线程分离，这样不用回收资源，自动释放。  
+__________经常这么用：`pthread_detach(pthread_self()); `
+
+
+##同步与互斥
+注意：这个方法不好使
+###互斥
+	pthread_mutex_t my_mutex;
+	pthread_mutex_init(&my_mutex,NULL)
+	pthread_mutex_lock(&my_mutex);
+	pthread_mutex_unlock(&my_mutex);
+	pthread_mutex_destroy(&my_mutex);
+
+###同步
+	pthread_cond_t my_sig;
+	pthread_cond_init(&my_sig,NULL);
+	pthread_cond_wait(&my_sig, &my_mutex);
+	pthread_cond_signal(&my_sig);
+	
+范例：查看`producer_consumer.c`
+
+###单例模式
+`pthread_once()`  ---  这里面的内容，即使开启多个线程，这里也只执行一次
+
+
+###PV操作
+
+	#include <semaphore.h>
+	sem_wait(sem *sem);			//P()操作
+	sem_post(sem_t *sem);		//V()操作
+	int sem_init();
+	int sem_destroy(sem_t *sem);
+
+范例：查看`producer_consumer_chunyang.c`
+
+
+
+##以后再说：
+原子操作,gcc 提供 CAS
+
+
+
+###Clone()函数
+功能：用于创建线程。在 Linux 中,线程是采用了一种轻量级进程的实现。所以 Linux 中的线程有两个 ID, pthread_self()是 pthread_t 类型是所谓的线程 id,然而还有一 个真实的进程 ID,类型 pid_t,获取方式为 gettid(). 16.我们采用的线程模型叫做 NPTL,(native posix thread ), 它采用的是 1:1 的线程模型。
+

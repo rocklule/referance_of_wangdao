@@ -1,0 +1,11 @@
+1	peter	90
+2	mery	85
+3	lucy	88
+11	slkdfj	3
+12	dsf	445
+22	skdfj	22
+23	slkfdj	23
+24	sdf	234
+30	30	30
+32	32	32
+35	35	35

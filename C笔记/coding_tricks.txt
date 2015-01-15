@@ -1,0 +1,68 @@
+#coding tricks
+
+[TOC]
+
+---
+
+###1. 指定内存空间的初始化
+`void * memset ( void * ptr, int value, size_t num );`  
+
+- 需要include <string.h>
+- 填充方式：以int型填充，每次以`1个字节`的补码，所以只能填充0，或－1（补码为全0和全1），否则以其他类型读取时会出问题。
+
+---
+
+###2. 一种对整数数量级的试探技巧 
+`while(w/i) i*=10;` 退出时，i即比最高位多1.
+
+---
+
+###3. 简易随机数生成
+`#include <time.h>`  
+`#include <stdlib.h>`  
+`srand(time(0))`  
+`rand()%100`  其中100是范围上限，0是默认下限。
+
+---
+
+###4. 想给int赋一个默认的最小值？
+`0x8000 0000` （补码）
+
+---
+
+###5. 怎么取一个数字得某几位？
+方法一：`按位“与”`（掩码）！  
+方法二：用更小号的指针（char *玩int）操作它！`注意小端机的内存中的存放逆序！`
+
+###6. c语言库中的万能排序`qsort`
+详参：<http://en.cppreference.com/w/c/algorithm/qsort>
+
+###7. **`sprintf`** ,**`sscanf`**格式化输入/输出去不同的目标（文件、字符串）
+
+###8. malloc的替代？`calloc`分配空间并初始化为**0**
+参考：<http://en.cppreference.com/w/c/memory/calloc>
+
+###9. 整型和字符串转换
+`itoa`，`atoi`  ASCII to Integer
+
+###10. 比较字符串的前n个字符，strncmp
+
+###11.无限从屏幕输入
+
+`while(memset(send_buf,0,1024),fgets(send_buf,1024,stdin)!=NULL)`
+
+###12.读取整个文件
+
+`while(memset(buff, 0, 4096), fread(buff,1,4096,fp)>0)`
+
+`while(memset(buff, 0, 4096), fgets(buff, 1024,fp) != NULL)`
+
+###13.精确的sleep()－－－－usleep()
+
+###14.计时器
+- alarm(3)   三秒后向自己发SIGALRM类型signal
+- setitimer()  函数比较复杂，高级计时器，也向自己发送SIGALRM类型signal
+
+
+
+
